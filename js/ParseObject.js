@@ -2,6 +2,12 @@ import util.underscore as _;
 import util.ajax as ajax;
 
 exports = Class(function(supr) {
+  var getDate = function (value) {
+    return {
+      iso: value,
+      __type: 'Date'
+    }
+  };
   this.init = function(classname) {
     this.route = "https://api.parse.com/1/classes/" + classname;
     this._attributes = {};
@@ -16,13 +22,27 @@ exports = Class(function(supr) {
     if (_.isObject(key)) {
       _.extend(this._attributes, key);
       _.each(key, bind(this, function(key, value) {
+        if (_.isDate(value)) {
+          this._attributes[key] = getDate(value);
+        }
         this.markDirty(key);
       }));
     } else {
       this.markDirty(key);
+      if (_.isDate(value)) {
+        value = getDate(value);
+      }
       this._attributes[key] = value;
     }
   };
+
+  this.get = function (key) {
+    var val = this._attributes[key];
+    if (val && val.__type) {
+      return val.iso;
+    }
+    return val;
+  }
 
   this.markDirty = function(key) {
     if (this._dirty.indexOf(key) < 0) {
