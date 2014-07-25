@@ -9,6 +9,7 @@ exports = Class(function(supr) {
     }
   };
   this.init = function(classname) {
+    this._class = classname;
     this.route = "https://api.parse.com/1/classes/" + classname;
     this._attributes = {};
     this._dirty = [];
@@ -73,13 +74,25 @@ exports = Class(function(supr) {
         } else {
           this._attributes = resp.response;
         }
-        callback(err, resp);
+        callback && callback(err, resp);
       });
     }
   };
 
   this.del = function(objectId, callback) {
     this.request('DELETE', this.route + objectId, undefined, callback);
+  };
+
+  this.pointTo = function (property, cls, objectId) {
+    this._attributes[property] = {
+      __op: "AddRelation",
+      objects: {
+        __type: 'Pointer',
+        className: cls,
+        objectId: objectId
+      }
+    };
+    this.markDirty(property);
   };
 
   this.save = function(cb) {
@@ -92,13 +105,14 @@ exports = Class(function(supr) {
         this.request('PUT', this.route + this._attributes.objectId, data, cb);
       }
     } else {
+      logger.log('{{Parse}}', 'Saving new ' + this._class )
       this._dirty= [];
       this.request('POST', this.route, this._attributes, function (err, resp) {
         if (err) {
           logger.log('{parse}', err);
         } else {
           _.extend(this._attributes, resp.response);
-          callback(err, resp);
+          cb && cb(err, resp);
         }
       });
     }
